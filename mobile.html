@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Student Portal Pro</title>
+
+<link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body { background:#f5f7fa; font-family:Segoe UI; }
+
+.ui-header {
+  background: linear-gradient(135deg,#4e73df,#1cc88a)!important;
+  color:white!important;
+  border:none!important;
+}
+
+.card {
+  background:white;
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+.btn-main {
+  background:#4e73df!important;
+  color:white!important;
+  border-radius:20px!important;
+}
+
+.badge {
+  padding:5px 10px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+.badge-pending { background:#ffc107; }
+.badge-done { background:#28a745; color:white; }
+
+.center { text-align:center; }
+
+.empty {
+  text-align:center;
+  color:gray;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div data-role="page" id="login">
+  <div data-role="header"><h1>Login</h1></div>
+  <div data-role="content">
+
+    <div class="card">
+      <input type="text" id="username" placeholder="Enter Name">
+      <input type="password" id="password" placeholder="Password">
+
+      <button onclick="login()" class="ui-btn btn-main">Login</button>
+
+      <div id="loginError" class="empty"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- HOME -->
+<div data-role="page" id="home">
+
+  <div data-role="header"><h1>Dashboard</h1></div>
+
+  <div data-role="navbar">
+    <ul>
+      <li><a href="#home" class="ui-btn-active">Home</a></li>
+      <li><a href="#tasks">Tasks</a></li>
+      <li><a href="#attendance">Attendance</a></li>
+      <li><a href="#profile">Profile</a></li>
+    </ul>
+  </div>
+
+  <div data-role="content">
+
+    <div class="card">
+      <h3 id="welcome"></h3>
+    </div>
+
+    <div class="card">
+      <p>Total Tasks: <b id="totalTasks"></b></p>
+      <p>Completed: <b id="completedTasks"></b></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TASKS -->
+<div data-role="page" id="tasks">
+
+  <div data-role="header">
+    <a href="#home" data-icon="back">Back</a>
+    <h1>Assignments</h1>
+  </div>
+
+  <div data-role="content">
+
+    <div class="card">
+      <input type="text" id="taskInput" placeholder="Enter assignment">
+      <button onclick="addTask()" class="ui-btn btn-main">Add</button>
+    </div>
+
+    <div id="taskList"></div>
+
+  </div>
+</div>
+
+<!-- ATTENDANCE -->
+<div data-role="page" id="attendance">
+
+  <div data-role="header">
+    <a href="#home" data-icon="back">Back</a>
+    <h1>Attendance</h1>
+  </div>
+
+  <div data-role="content">
+
+    <div class="card center">
+      <h3 id="attendanceValue"></h3>
+      <button onclick="markAttendance()" class="ui-btn btn-main">Mark Present</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div data-role="page" id="profile">
+
+  <div data-role="header">
+    <a href="#home" data-icon="back">Back</a>
+    <h1>Profile</h1>
+  </div>
+
+  <div data-role="content">
+
+    <div class="card center">
+      <h3 id="profileName"></h3>
+      <p>Email: student@email.com</p>
+      <button onclick="logout()" class="ui-btn btn-main">Logout</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+// LOGIN
+function login() {
+  let name = $("#username").val();
+
+  if(!name){
+    $("#loginError").text("Please enter name");
+    return;
+  }
+
+  localStorage.setItem("user", name);
+  $.mobile.changePage("#home");
+}
+
+// DASHBOARD
+function loadDashboard() {
+  let user = localStorage.getItem("user") || "Guest";
+  $("#welcome").text("Welcome, " + user);
+
+  let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+  $("#totalTasks").text(tasks.length);
+
+  let completed = tasks.filter(t => t.done).length;
+  $("#completedTasks").text(completed);
+}
+
+// TASKS
+function addTask() {
+  let text = $("#taskInput").val();
+
+  if(!text) return;
+
+  let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+  tasks.push({ text, done:false });
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+
+  $("#taskInput").val("");
+  displayTasks();
+}
+
+function displayTasks() {
+  let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+  if(tasks.length === 0){
+    $("#taskList").html('<p class="empty">No assignments yet</p>');
+    return;
+  }
+
+  let html = "";
+
+  tasks.forEach((t, i) => {
+    html += `
+      <div class="card">
+        <b>${t.text}</b><br>
+        <span class="badge ${t.done ? 'badge-done':'badge-pending'}">
+          ${t.done ? 'Done':'Pending'}
+        </span><br><br>
+
+        <button onclick="toggleTask(${i})" class="ui-btn btn-main">Toggle</button>
+        <button onclick="deleteTask(${i})" class="ui-btn ui-btn-inline">Delete</button>
+      </div>
+    `;
+  });
+
+  $("#taskList").html(html);
+}
+
+function toggleTask(i){
+  let tasks = JSON.parse(localStorage.getItem("tasks"));
+  tasks[i].done = !tasks[i].done;
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+  displayTasks();
+}
+
+function deleteTask(i){
+  let tasks = JSON.parse(localStorage.getItem("tasks"));
+  tasks.splice(i,1);
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+  displayTasks();
+}
+
+// ATTENDANCE
+function loadAttendance(){
+  let val = localStorage.getItem("attendance") || 75;
+  $("#attendanceValue").text(val + "%");
+}
+
+function markAttendance(){
+  let val = parseInt(localStorage.getItem("attendance") || 75);
+  val++;
+  localStorage.setItem("attendance", val);
+  loadAttendance();
+}
+
+// PROFILE
+function loadProfile(){
+  $("#profileName").text(localStorage.getItem("user"));
+}
+
+// LOGOUT
+function logout(){
+  localStorage.clear();
+  $.mobile.changePage("#login");
+}
+
+// AUTO LOAD
+$(document).on("pageshow", "#home", loadDashboard);
+$(document).on("pageshow", "#tasks", displayTasks);
+$(document).on("pageshow", "#attendance", loadAttendance);
+$(document).on("pageshow", "#profile", loadProfile);
+
+</script>
+
+</body>
+</html>
